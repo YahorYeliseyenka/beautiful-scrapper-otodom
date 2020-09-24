@@ -4,11 +4,10 @@ import time
 import argparse
 from urllib.parse import ParseResult
 
-from scrapper import proceed 
+from scrapper import proceed, offersPerPage
 
 dataPath = f'{os.getcwd()}\data'
 hostURL = 'www.otodom.pl'
-offersPerPage = 24
 typesPL = {'renting': 'wynajem',
                 'selling': 'sprzedaz',
                 'house': 'dom',
@@ -26,8 +25,6 @@ def get_args():
                         type=lambda input: is_valid(parser, ('house', 'flat'), input))
     parser.add_argument('-c', '--city', nargs='+', required=True,
                         help='Enter the city you are interested in')
-    parser.add_argument('-i', '--image', type=bool, default=False,
-                        help='Enter whether you are interested in image scrapping')
     return parser.parse_args()
 
 
@@ -37,20 +34,19 @@ def is_valid(parser, choices, input):
 
 
 # function creates project data dirs for scrapper results
-def create_data_dir(main_urls_and_dirs):
+def create_dirs(urls_dirs):
     if not os.path.exists(dataPath):
         os.mkdir(dataPath)
 
-    for url, path in main_urls_and_dirs.items():
-        for dir_ in path:
-            if dir_ and not os.path.exists(dir_):
-                os.mkdir(dir_)
+    for ulr, dir_ in urls_dirs.items():
+        if not os.path.exists(dir_):
+            os.mkdir(dir_)
 
 
-# function creates all necessary urls based on category
-# category which was chose with app args
-def get_main_urls_and_dirs(args):
-    main_urls = {}
+# function creates all necessary urls and dirs based on categories
+# categories which were chose with app args
+def get_urls_dirs(args):
+    urls_data = {}
 
     for rentaltype in args.rentaltype:
         for propertytype in args.propertytype:
@@ -62,22 +58,21 @@ def get_main_urls_and_dirs(args):
                                         query=(f'nrAdsPerPage={offersPerPage}'),
                                         fragment='').geturl()
                 json_path = f'{dataPath}\{rentaltype}-{propertytype}-{city.lower()}'
-                img_path = f'{json_path}\img' if args.image else ''
-                main_urls[main_url] = (json_path, img_path)
-    return main_urls
+                urls_data[main_url] = json_path
+    return urls_data
 
 
 def main():
     try:
         args = get_args()
-        print(f'So, you are looking for {"/".join(args.rentaltype)}', 
-            f'{"/".join(args.propertytype)} in {("/".join(args.city)).lower()}...')
 
-        main_urls_and_dirs = get_main_urls_and_dirs(args)
-        create_data_dir(main_urls_and_dirs)
-        print('All necessary directories have been created.')
+        print('Creating directories for saving data...')
+        urls_dirs = get_urls_dirs(args)
+        create_dirs(urls_dirs)
 
-        proceed(main_urls_and_dirs)
+        print(f'Looking for {"/".join(args.rentaltype).upper()}', 
+            f'{"/".join(args.propertytype).upper()} in {("/".join(args.city)).upper()} offers...')
+        proceed(urls_dirs)
     except Exception as error:
         print('Houston, we have a problem:\n\t\t', str(error).upper())
 
