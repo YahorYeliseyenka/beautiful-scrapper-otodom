@@ -1,4 +1,6 @@
-class Apartment:
+
+# class used to create property object
+class Offer:
 
     def __init__(self, url, name=None, description=None, photos=None, 
                 address=None, coordinates=None, geo_level=None, 

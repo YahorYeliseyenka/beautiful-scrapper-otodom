@@ -1,4 +1,5 @@
 import time
+import traceback
 from math import ceil
 
 import progressbar as pb
@@ -7,11 +8,13 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen, HTTPError, urlretrieve
 from bs4 import BeautifulSoup as bs
 
-from apartment import Apartment
+from offer import Offer
 
 offersPerPage = 24
 backslash = '\\'
 
+
+# return parsed html file
 def download_page(url):
     request = Request(url, headers={
         'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 '+
@@ -22,34 +25,36 @@ def download_page(url):
 
 
 # return amount of ofers in specific category
-def get_page_offers_amount(html_page):
+def get_offers_amount(html_page):
     offers_amount = (html_page.find('div', class_='offers-index').find('strong').text)
     return int(''.join(offers_amount.split()))
 
 
-# return list of apartments in page
-def get_apartments(html_page):
+# return list of offers in page
+def get_offers(html_page):
     div_container = html_page.find('div', class_='listing')
-    apartments = []
+    offers = []
     for article in div_container.find_all('article', class_='offer-item'):
-        apartments.append(get_offer_info(article.get('data-url')))
-    return apartments
+        offers.append(get_offer_info(article.get('data-url')))
+    return offers
 
 
 def get_page_url(url, page_number):
     return url if page_number == 1 else f'{url}&page={page_number}'
 
 
-def get_offer_info(offer_url):
-    html_page = download_page(offer_url)
+# download info about offer
+# return new Offert object with all info OR empty object with page url
+def get_offer_info(url):
+    html_page = download_page(url)
 
     #find application/Json script
     appJson = html_page.find(id='server-app-state') if html_page else None
 
     if appJson:
-        initialProps = json.loads(appJson.text).get('initialProps', {})
-        meta_data = initialProps.get('meta', {}).get('target', {}) or {}
-        advert_data = initialProps.get('data', {}).get('advert', {}) or {}
+        initialProps = json.loads(appJson.text).get('initialProps') or {}
+        meta_data = initialProps.get('meta', {}).get('target') or {}
+        advert_data = initialProps.get('data', {}).get('advert') or {}
         
         photos = []
         for photo in advert_data.get('photos', []):
@@ -82,7 +87,7 @@ def get_offer_info(offer_url):
 
         extra = {item:advert_data.get(item) for item in ('advertiser_type', 'advert_type', 'agency')}
 
-    return Apartment(url=offer_url, 
+    return Offer(url=url, 
                     name=name, 
                     description=advert_data.get('description'),
                     photos=photos, 
@@ -96,11 +101,11 @@ def get_offer_info(offer_url):
                     extra=extra,
                     date_created=advert_data.get('dateCreated'),
                     date_modified=advert_data.get('dateModified')
-                    ) if appJson else Apartment(url=offer_url)
+                    ) if appJson else Offer(url=url)
 
 
-#converts list of apartments into json and save
-def save_apartments(dir_, appartmentArray, fileName):
+#converts list of offers into json and save
+def save_offers(dir_, appartmentArray, fileName):
     with open(f'{dir_}/page{fileName}.json', 'w', encoding='utf-8') as outfile:
         for appartment in appartmentArray:
             json.dump(appartment.__dict__, outfile, indent=1, 
@@ -108,49 +113,53 @@ def save_apartments(dir_, appartmentArray, fileName):
        
 
 def proceed(urls_dirs):
-    all_pages_amount = 0
-    all_offers_amount = 0
+    total_pages, total_offers, total_saved = (0, 0, 0)
     pages_with_error = []
 
     for url in urls_dirs:
-        offers_amount = get_page_offers_amount(download_page(url))
-        all_offers_amount += offers_amount
-        all_pages_amount += ceil(offers_amount/offersPerPage)
-    print(f'{all_offers_amount} offers were found...')
+        offers_amount = get_offers_amount(download_page(url))
+        total_offers += offers_amount
+        total_pages+= ceil(offers_amount/offersPerPage)
+    print(f'{total_offers} offers were found.')
 
-    print('\nBeginning processing. \tTime start:',time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+    print('\nProcessing started at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
     # initialize progress bar
     timer = pb.ProgressBar(widgets=['', pb.Percentage(), ' ', pb.Bar(fill='-'), ' ', 
-                                    pb.ETA()], maxval=all_pages_amount).start()
+                                    pb.ETA()], maxval=total_pages).start()
     counter = 0
 
     for url, dir_ in urls_dirs.items():
         pages_with_error = []
-        pages_amount = ceil(get_page_offers_amount(download_page(url))/offersPerPage)
+        pages_amount = ceil(get_offers_amount(download_page(url))/offersPerPage)
+        total_saved += pages_amount
         for i in range(1, pages_amount+1):
             page_url = get_page_url(url, i)
             try:
-                apartments = get_apartments(download_page(page_url))
-                save_apartments(dir_, apartments, i)
+                offers = get_offers(download_page(page_url))
+                save_offers(dir_, offers, i)
                 counter += 1
                 timer.update(counter)   
             except HTTPError:
                 pages_with_error.append(page_url)
-            except Exception as error:
-                print(f'\nHouston, we have a problem in loop 1 with {page_url}:\n\t\t{error}')
+            except Exception:
+                print(f'\nHouston, we have a problem in loop 1 with {page_url}')
+                traceback.print_exc()
                 counter += 1
                 timer.update(counter)
         for url in pages_with_error:
             try:
-                apartments = get_apartments(download_page(url))
-                save_apartments(dir_, apartments, i)
+                offers = get_offers(download_page(url))
+                save_offers(dir_, offers, i)
                 counter += 1
                 timer.update(counter)
-            except Exception as error:
-                print(f'\nHouston, we have a problem with in loop 2 {url}:\n\t\t{error}')
+            except Exception:
+                print(f'\nHouston, we have a problem in loop 2 with {url}')
+                traceback.print_exc()
                 counter += 1
                 timer.update(counter)
-        print(f'\n{dir_.split(backslash)[-1].upper()} download completed. \tSaved {pages_amount} out of {all_pages_amount} pages.',
-                f'\tProgress: {round(timer.percentage, 2)}%. \tEnded at: {timer.last_update_time}.')
+        print(f'\n{dir_.split(backslash)[-1].upper()} download completed.', 
+                f'\t{pages_amount} pages saved.',
+                f'\tProgress: {total_saved} out of {total_pages}.', 
+                f'\tEnded at: {timer.last_update_time}.\n')
     timer.finish()
-    print('Scrapping completed.')
+    print(f'Processing ended at {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())}.\tHAVE A FUN!')
