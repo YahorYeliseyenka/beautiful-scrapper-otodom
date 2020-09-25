@@ -7,7 +7,7 @@ import progressbar as pb
 import json
 from urllib.parse import urlparse
 from urllib.request import Request 
-from urllib.request import urlopen, urlretrieve
+from urllib.request import urlopen
 from urllib.request import HTTPError, URLError
 from bs4 import BeautifulSoup as bs
 
@@ -115,10 +115,10 @@ def get_offer_info(url):
                     ) if appJson else Offer(url=url)
 
 
-#converts list of offers into json and save
-def save_offers(dir_, appartmentArray, fileName):
-    with open(f'{dir_}/page{fileName}.json', 'w', encoding='utf-8') as outfile:
-        for appartment in appartmentArray:
+# converts list of offers into json and save
+def save_offers(dir_, appartments, file_name):
+    with open(f'{dir_}/page{file_name}.json', 'w', encoding='utf-8') as outfile:
+        for appartment in appartments:
             json.dump(appartment.__dict__, outfile, indent=1, 
                         separators=(',', ': '), ensure_ascii=False)
 
@@ -133,7 +133,7 @@ def get_path(dir_):
 
 
 def proceed(urls_dirs):
-    total_pages, total_offers, (0, 0)
+    total_pages, total_offers = (0, 0)
     pages_with_error = []
 
     create_dir(dataPath)
@@ -149,7 +149,7 @@ def proceed(urls_dirs):
         # initialize progress bar
         timer = pb.ProgressBar(widgets=['', pb.Percentage(), ' ', pb.Bar(fill='-'), ' ', 
                                         pb.ETA()], maxval=total_pages).start()
-        total_saved, counter = (0, 0)
+        total_saved, timer_counter = (0, 0)
 
         for url, dir_ in urls_dirs.items():
             pages_with_error = []
@@ -161,27 +161,27 @@ def proceed(urls_dirs):
                     offers = get_offers(page_url)
                     save_offers(get_path(dir_), offers, i)
                     total_saved += 1
-                    counter += 1
-                    timer.update(counter)   
+                    timer_counter += 1
+                    timer.update(timer_counter)   
                 except (HTTPError, URLError, AttributeError):
                     pages_with_error.append((page_url,i))
                 except Exception:
                     print(f'\nHouston, we have a problem in loop 1 with {page_url}')
                     traceback.print_exc()
-                    counter += 1
-                    timer.update(counter)
+                    timer_counter += 1
+                    timer.update(timer_counter)
             for url_error, i in pages_with_error:
                 try:
                     offers = get_offers(url_error)
                     save_offers(get_path(dir_), offers, i)
                     total_saved += 1
-                    counter += 1
-                    timer.update(counter)
+                    timer_counter += 1
+                    timer.update(timer_counter)
                 except Exception:
                     print(f'\nHouston, we have a problem in loop 2 with {url_error}')
                     traceback.print_exc()
-                    counter += 1
-                    timer.update(counter)
+                    timer_counter += 1
+                    timer.update(timer_counter)
             print(f'\n{dir_.upper()} download completed.', 
                     f'\t{pages_amount} pages saved.',
                     f'\tProgress: {total_saved} out of {total_pages}.', 
