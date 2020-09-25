@@ -1,12 +1,12 @@
-import os
 import traceback
 
 import argparse
 from urllib.parse import ParseResult
+from urllib.request import HTTPError
 
 from scrapper import proceed, offersPerPage
 
-dataPath = f'{os.getcwd()}\data'        # path for data in working dir
+
 hostURL = 'www.otodom.pl'               # otodom.pl domain
 typesPL = {'renting': 'wynajem',
             'selling': 'sprzedaz',
@@ -38,26 +38,17 @@ def is_valid(parser, choices, input):
     return input if input in choices else parser.error("Args doesn't equal to {}".format(choices))
 
 
-# create project data dirs for scrapper results
-def create_dirs(urls_dirs):
-    if not os.path.exists(dataPath):
-        os.mkdir(dataPath)
-
-    for ulr, dir_ in urls_dirs.items():
-        if not os.path.exists(dir_):
-            os.mkdir(dir_)
-
-
 # create all necessary urls and dirs based on categories
 # return dictionary {page_url : path_to_saving_data}
 def get_urls_dirs(args):
     urls_data = {}
+    message = ''
 
     for rentaltype in args.rentaltype:
         for propertytype in args.propertytype:
             for city in args.city:
                 if rentaltype == 'selling' and propertytype == 'room': 
-                    print(f'Ha-ha, rooms for sale, you\'re funny.')
+                    message = 'Ha-ha, rooms for sale, you\'re funny.'
                     continue
                 main_url = ParseResult(scheme='https', netloc=hostURL,
                                         path=(f'{typesPL.get(rentaltype)}/'+
@@ -65,27 +56,21 @@ def get_urls_dirs(args):
                                             f'{city.lower()}/'), params='',
                                         query=(f'nrAdsPerPage={offersPerPage}'),
                                         fragment='').geturl()
-                json_path = f'{dataPath}\{rentaltype}-{propertytype}-{city.lower()}'
+                json_path = f'{rentaltype}-{propertytype}-{city.lower()}'
                 urls_data[main_url] = json_path
+    if message: print(message)
     return urls_data
 
 
 def main():
-    try:
-        # get arguments from argument parser
-        args = get_args()
+    # get arguments from argument parser
+    args = get_args()
 
-        # generate urls and dirs based on arguments
-        urls_dirs = get_urls_dirs(args)
+    # generate urls and dirs based on arguments
+    urls_dirs = get_urls_dirs(args)
 
-        # create all necessary dirs for data scrapping process
-        create_dirs(urls_dirs)
-
-        # run the scrapper
-        proceed(urls_dirs)
-    except Exception:
-        print('Houston, we have a problem')
-        traceback.print_exc()
+    # run the scrapper
+    proceed(urls_dirs)
 
 
 if __name__ == "__main__":
