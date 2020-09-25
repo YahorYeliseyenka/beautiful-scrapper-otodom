@@ -23,13 +23,13 @@ typesPL = {'renting': 'wynajem',
 def get_args():
     parser = argparse.ArgumentParser(description='Provide input scrapper args')
     parser.add_argument('-rt', '--rentaltype', nargs='+', required=True,
-                        help='Enter whether you are interested in *renting* or *selling*',
-                        type=lambda input: is_valid(parser, ("renting", "selling"), input))
+                        help='Enter one or more rental types: \n\trenting \n\tselling',
+                        type=lambda input: is_valid(parser, ('renting', 'selling'), input))
     parser.add_argument('-pt', '--propertytype', nargs='+', required=True,
-                        help='Enter whether you are interested in a *house*, *flat*, *room*, *plot*, *premises*, *hall* or *garage*',
+                        help='Enter one or more property types: \n\thouse \n\tflat \n\troom \n\tplot \n\tpremises \n\thall \n\tgarage',
                         type=lambda input: is_valid(parser, ('house', 'flat', 'room', 'plot', 'premises', 'hall', 'garage'), input))
     parser.add_argument('-c', '--city', nargs='+', required=True,
-                        help='Enter the city you are interested in')
+                        help='Enter one or more city names')
     return parser.parse_args()
 
 
