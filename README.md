@@ -29,13 +29,16 @@
 ```
 # How it works
 
-    Scrapper creates \data directory and its subdirectories. Subdirectory name depends on the user input parameters (e.g. \data\renting-flat-poznan).
+    Scrapper creates \data directory and its subdirectories. Subdirectory name 
+    depends on the user input parameters (e.g. \data\renting-flat-poznan).
 
-    Scraper downloads all pages from the category, goes through all pages, gets a single offer and then gets inside to mine info. 
+    Scraper downloads all pages from the category, goes through all pages, gets 
+    a single offer and then gets inside to mine more info. 
     Then it goes to another offer.
     Page by page.
     Category by category.
 
-    If otodom.pl block the query for pages, then scrapper will append this query to the end, to try it later.
+    If otodom.pl block the query for pages, then scrapper will append this 
+    query to the end, to try it later.
     
     Scrapper saves offers info in JSON format files in \data subdirectories.
