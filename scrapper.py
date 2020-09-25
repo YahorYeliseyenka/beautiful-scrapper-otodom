@@ -118,9 +118,7 @@ def get_offer_info(url):
 # converts list of offers into json and save
 def save_offers(dir_, appartments, file_name):
     with open(f'{dir_}/page{file_name}.json', 'w', encoding='utf-8') as outfile:
-        for appartment in appartments:
-            json.dump(appartment.__dict__, outfile, indent=1, 
-                        separators=(',', ': '), ensure_ascii=False)
+        json.dump([appartment.__dict__ for appartment in appartments], outfile, indent=1)
 
 
 # create project data dir for scrapper results

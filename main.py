@@ -44,8 +44,8 @@ def get_urls_dirs(args):
     urls_data = {}
     message = ''
 
-    for rentaltype in args.rentaltype:
-        for propertytype in args.propertytype:
+    for propertytype in args.propertytype:        
+        for rentaltype in args.rentaltype:
             for city in args.city:
                 if rentaltype == 'selling' and propertytype == 'room': 
                     message = 'Ha-ha, rooms for sale, you\'re funny.'
