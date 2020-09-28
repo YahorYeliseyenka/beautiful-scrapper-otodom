@@ -29,16 +29,16 @@
 ```
 # How it works
 
-    Scrapper creates \data directory and its subdirectories. Subdirectory name 
-    depends on the user input parameters (e.g. \data\renting-flat-poznan).
+    Scrapper creates a '*\data' directory in the project folder. This 
+    directory is used for storing the extracted data. Data is stored 
+    in JSON files. The file names depend on the parameters entered 
+    by the user (for example, '*\data\renting-flat-poznan.json').
 
-    Scraper downloads all pages from the category, goes through all pages, gets 
-    a single offer and then gets inside to mine more info. 
+    Scraper loads all pages from a category, views each page, gets 
+    a single offer and then goes inside to collect data. 
     Then it goes to another offer.
     Page by page.
     Category by category.
 
-    If otodom.pl block the query for pages, then scrapper will append this 
-    query to the end, to try it later.
-    
-    Scrapper saves offers info in JSON format files in \data subdirectories.
+    If otodom.pl blocks page downloading, then scrapper appends it to the end 
+    of the queue, to try it later.s

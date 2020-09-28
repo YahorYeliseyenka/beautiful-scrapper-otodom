@@ -1,13 +1,14 @@
 import os
 import time
 import traceback
+import shutil
 from math import ceil
 
 import progressbar as pb
 import json
 from urllib.parse import urlparse
 from urllib.request import Request 
-from urllib.request import urlopen
+from urllib.request import urlopen, urlretrieve
 from urllib.request import HTTPError, URLError
 from bs4 import BeautifulSoup as bs
 
@@ -15,6 +16,7 @@ from offer import Offer
 
 dataPath = f'{os.getcwd()}\data'        # path for data in working dir
 offersPerPage = 24                      # offers on page. 24 - standard. 48, 72
+otodomStuff = 'otodompl-imagestmp.akamaized.net'
 
 
 # return parsed html file
@@ -42,7 +44,7 @@ def get_offers(url):
     html = download_page(url)
     div_container = html.find('div', class_='listing')
     offers = []
-    for article in div_container.find_all('article', class_='offer-item'):
+    for article in div_container.find_all('article', class_='offer-item', attrs={"data-featured-name": "listing_no_promo"}):
         offers.append(get_offer_info(article.get('data-url')))
     return offers
 
@@ -117,9 +119,67 @@ def get_offer_info(url):
 
 # converts list of offers into json and save
 def save_offers(dir_, appartments, file_name):
-    with open(f'{dir_}/page{file_name}.json', 'w', encoding='utf-8') as outfile:
+    with open(f'{get_path(dir_)}/page{file_name}.json', 'w', encoding='utf-8') as outfile:
         json.dump([appartment.__dict__ for appartment in appartments], outfile, indent=1)
 
+
+def count_obj(filenames):
+    obj_amount = 0
+    for filename in filenames:
+        with open(f'{dataPath}\{filename}.json', encoding='utf8') as json_file:
+            obj_amount += len(json.load(json_file))
+    return obj_amount
+
+
+def download(urls, photos_path):
+    names = []
+    for url in urls:
+        if otodomStuff in url:
+            names.append('')
+        else:
+            name = urlparse(url).path.split('/')[-2]+'.jpg'
+            try:
+                urlretrieve(url, f'{photos_path}\{name}')
+                names.append(name)
+            except Exception as e:
+                names.append('')
+                print('\nDoes not exist:',url)
+    return names
+
+
+def save_photos(filenames):
+    obj_amount = count_obj(filenames)
+    print(f'\n{obj_amount} objects with photos will be processed.')
+    print('Photos downloading and saving process STARTED at', 
+            time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+
+    timer = pb.ProgressBar(widgets=['Progress:', pb.Bar(fill='-'), 
+                            ' Complete: ', pb.SimpleProgress(), ' ', 
+                            pb.ETA()], maxval=obj_amount).start()
+    counter = 0
+
+    for filename in filenames:
+        photos_path = f'{dataPath}\{filename}-img'
+        json_path = f'{dataPath}\{filename}.json'
+        create_dir(photos_path)
+        data = []
+
+        with open(json_path, encoding="utf8") as json_file:
+            data = json.load(json_file)
+
+        for obj in data:
+            obj['photos'] = download(obj['photos'] or [], photos_path)
+            counter += 1
+            timer.update(counter)
+
+        with open(json_path, 'w', encoding="utf8") as outfile:
+            json.dump(data, outfile, indent=1)
+
+        print(f'\nPhotos were successfully saved in the {filename}-img directory.', 
+                f'{filename}.json updated.')
+    print('\nPhotos downloading and saving process ENDED at', 
+            time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+        
 
 # create project data dir for scrapper results
 def create_dir(path):
@@ -130,35 +190,55 @@ def get_path(dir_):
     return f'{dataPath}\{dir_}'
 
 
-def proceed(urls_dirs):
-    total_pages, total_offers = (0, 0)
+def to_one_file(dir_):
+    path = get_path(dir_)
+    for (dirpath, dirnames, filenames) in os.walk(path):
+        data = []
+
+        for filename in filenames:
+            with open(f'{path}\{filename}', encoding="utf8") as json_file:
+                data += json.load(json_file)
+
+        with open(f'{dataPath}\{dir_}.json', 'w', encoding="utf8") as outfile:
+            json.dump(data, outfile, indent=1)
+
+        shutil.rmtree(path)
+
+
+def get_pased_amount(url):
+    return ceil(get_offers_amount(url)/offersPerPage)
+
+
+def proceed(urls_dirs, savephotos):
+    total_pages = 0
     pages_with_error = []
 
     create_dir(dataPath)
 
     for url in urls_dirs:
-        offers_amount = get_offers_amount(url)
-        total_offers += offers_amount
-        total_pages+= ceil(offers_amount/offersPerPage)
-    print(f'{total_offers} offers were found.')
+        total_pages += get_pased_amount(url)
+    print(f'\n{total_pages} pages will be dowloaded and saved.')
 
-    if total_offers != 0:
-        print('\nProcessing started at', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+    if total_pages != 0:
+        print('Data gathering process STARTED at', 
+                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), '\n')
         # initialize progress bar
-        timer = pb.ProgressBar(widgets=['', pb.Percentage(), ' ', pb.Bar(fill='-'), ' ', 
-                                        pb.ETA()], maxval=total_pages).start()
-        total_saved, timer_counter = (0, 0)
+        timer = pb.ProgressBar(widgets=['Progress:', pb.Bar(fill='-'), 
+                                ' Complete: ', pb.SimpleProgress(), ' ', 
+                                pb.ETA()], maxval=total_pages).start()
+        timer_counter = 0
 
         for url, dir_ in urls_dirs.items():
-            pages_with_error = []
-            pages_amount = ceil(get_offers_amount(url)/offersPerPage)
             create_dir(get_path(dir_))
+            
+            pages_with_error = []
+            pages_amount = get_pased_amount(url)
+
             for i in range(1, pages_amount+1):
                 page_url = get_page_url(url, i)
                 try:
                     offers = get_offers(page_url)
-                    save_offers(get_path(dir_), offers, i)
-                    total_saved += 1
+                    save_offers(dir_, offers, i)
                     timer_counter += 1
                     timer.update(timer_counter)   
                 except (HTTPError, URLError, AttributeError):
@@ -171,8 +251,7 @@ def proceed(urls_dirs):
             for url_error, i in pages_with_error:
                 try:
                     offers = get_offers(url_error)
-                    save_offers(get_path(dir_), offers, i)
-                    total_saved += 1
+                    save_offers(dir_, offers, i)
                     timer_counter += 1
                     timer.update(timer_counter)
                 except Exception:
@@ -180,9 +259,11 @@ def proceed(urls_dirs):
                     traceback.print_exc()
                     timer_counter += 1
                     timer.update(timer_counter)
-            print(f'\n{dir_.upper()} download completed.', 
-                    f'\t{pages_amount} pages saved.',
-                    f'\tProgress: {total_saved} out of {total_pages}.', 
-                    f'\tEnded at: {timer.last_update_time}.\n')
-        timer.finish()
-        print(f'Processing ended at {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())}.\tHAVE A FUN!')
+
+            to_one_file(dir_)
+            print(f'\n{dir_}.json saved successfully.')
+            
+        print('\nData gathering process ENDED at', 
+                {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())})
+
+        if savephotos: save_photos(urls_dirs.values())

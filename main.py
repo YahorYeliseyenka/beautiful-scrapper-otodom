@@ -19,17 +19,19 @@ typesPL = {'renting': 'wynajem',
             'garage': 'garaz'}          # dict with path variables
 
 
-# setup argumet parser with 4 arguments: propertytype, rentaltype, city
+# setup argumet parser with 4 arguments: propertytype, rentaltype, city, savephotos
 def get_args():
     parser = argparse.ArgumentParser(description='Provide input scrapper args')
     parser.add_argument('-rt', '--rentaltype', nargs='+', required=True,
-                        help='Enter one or more rental types: \n\trenting \n\tselling',
+                        help='Enter one or more rental types: renting, selling',
                         type=lambda input: is_valid(parser, ('renting', 'selling'), input))
     parser.add_argument('-pt', '--propertytype', nargs='+', required=True,
-                        help='Enter one or more property types: \n\thouse \n\tflat \n\troom \n\tplot \n\tpremises \n\thall \n\tgarage',
+                        help='Enter one or more property types: house, flat, room, plot, premises, hall, garage',
                         type=lambda input: is_valid(parser, ('house', 'flat', 'room', 'plot', 'premises', 'hall', 'garage'), input))
     parser.add_argument('-c', '--city', nargs='+', required=True,
                         help='Enter one or more city names')
+    parser.add_argument('-sp', '--savephotos', dest='savephotos', action='store_true',
+                        help='Use, if you want to save photos')
     return parser.parse_args()
 
 
@@ -42,13 +44,11 @@ def is_valid(parser, choices, input):
 # return dictionary {page_url : path_to_saving_data}
 def get_urls_dirs(args):
     urls_data = {}
-    message = ''
 
     for propertytype in args.propertytype:        
         for rentaltype in args.rentaltype:
             for city in args.city:
                 if rentaltype == 'selling' and propertytype == 'room': 
-                    message = 'Ha-ha, rooms for sale, you\'re funny.'
                     continue
                 main_url = ParseResult(scheme='https', netloc=hostURL,
                                         path=(f'{typesPL.get(rentaltype)}/'+
@@ -58,7 +58,6 @@ def get_urls_dirs(args):
                                         fragment='').geturl()
                 json_path = f'{rentaltype}-{propertytype}-{city.lower()}'
                 urls_data[main_url] = json_path
-    if message: print(message)
     return urls_data
 
 
@@ -70,7 +69,7 @@ def main():
     urls_dirs = get_urls_dirs(args)
 
     # run the scrapper
-    proceed(urls_dirs)
+    proceed(urls_dirs, args.savephotos)
 
 
 if __name__ == "__main__":
