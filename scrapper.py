@@ -14,9 +14,9 @@ from bs4 import BeautifulSoup as bs
 
 from offer import Offer
 
-dataPath = f'{os.getcwd()}\data'        # path for data in working dir
-offersPerPage = 24                      # offers on page. 24 - standard. 48, 72
-otodomStuff = 'otodompl-imagestmp.akamaized.net'
+dataPath = f'{os.getcwd()}\data'                    # path for the data dir in project folder
+offersPerPage = 24                                  # offers on page. 24 - standard. 48, 72
+otodomStuff = 'otodompl-imagestmp.akamaized.net'    # otodom.pl 3D image.
 
 
 # return parsed html file
@@ -54,7 +54,7 @@ def get_page_url(url, page_number):
     return url if page_number == 1 else f'{url}&page={page_number}'
 
 
-# download info about offer
+# download offer info
 # return new Offert object with all info OR empty object with page url
 def get_offer_info(url):
     html = download_page(url)
@@ -62,8 +62,6 @@ def get_offer_info(url):
     # find application/Json script
     appJson = html.find(id='server-app-state') if html else None
 
-    # if application/Json sctipt is empty
-    # return empty offer object
     if appJson:
         initialProps = json.loads(appJson.text).get('initialProps') or {}
         meta_data = initialProps.get('meta', {}).get('target') or {}
@@ -76,18 +74,23 @@ def get_offer_info(url):
                             photo.get('small') or 
                             photo.get('thumbnail'))
 
+        # offers title
         name = initialProps.get('meta', {}).get('seo', {}).get('title')
 
         location = advert_data.get('location', {})
         address = location.get('address')
         coordinates = [location.get('coordinates', {}).get(item) for item in ('latitude', 'longitude')]
+
+        # region, city, distinct, sub-region
         geo_level = {item.get('type'):item.get('label') for item in location.get('geoLevel', [])}
 
+        # rent, rooms number, heating type and others
         characteristics = {item.get('key'):item.get('value') 
                             for item in advert_data.get('characteristics', [])}
 
         price = {i:advert_data.get('price', {}).get(i) for i in ('value', 'unit', 'suffix')}
 
+        # dishwasher, fridge, oven and others
         features=advert_data.get('features', [])
         features_en = meta_data.get('Equipment_types', []) + meta_data.get('Security_types', [])
         features_en += meta_data.get('Media_types', []) + meta_data.get('Extras_types', [])
@@ -97,7 +100,7 @@ def get_offer_info(url):
                     features_en += features[:-len(features_en)]
                 else:
                     features_en = features
-
+        # advertiser type: private, business...; agency data; advert type
         extra = {item:advert_data.get(item) for item in ('advertiser_type', 'advert_type', 'agency')}
 
     return Offer(url=url, 
@@ -123,6 +126,7 @@ def save_offers(dir_, appartments, file_name):
         json.dump([appartment.__dict__ for appartment in appartments], outfile, indent=1)
 
 
+# returt amount of objects from JSON file
 def count_obj(filenames):
     obj_amount = 0
     for filename in filenames:
@@ -131,9 +135,11 @@ def count_obj(filenames):
     return obj_amount
 
 
+# save photos and return a list of their names
 def download(urls, photos_path):
     names = []
     for url in urls:
+        # there is no need to download 3d objects
         if otodomStuff in url:
             names.append('')
         else:
@@ -147,6 +153,7 @@ def download(urls, photos_path):
     return names
 
 
+# save photos
 def save_photos(filenames):
     obj_amount = count_obj(filenames)
     print(f'\n{obj_amount} objects with photos will be processed.')
@@ -190,6 +197,7 @@ def get_path(dir_):
     return f'{dataPath}\{dir_}'
 
 
+# combine all data from a specific category into one file
 def to_one_file(dir_):
     path = get_path(dir_)
     for (dirpath, dirnames, filenames) in os.walk(path):
@@ -205,7 +213,7 @@ def to_one_file(dir_):
         shutil.rmtree(path)
 
 
-def get_pased_amount(url):
+def get_pages_amount(url):
     return ceil(get_offers_amount(url)/offersPerPage)
 
 
@@ -216,7 +224,7 @@ def proceed(urls_dirs, savephotos):
     create_dir(dataPath)
 
     for url in urls_dirs:
-        total_pages += get_pased_amount(url)
+        total_pages += get_pages_amount(url)
     print(f'\n{total_pages} pages will be dowloaded and saved.')
 
     if total_pages != 0:
@@ -232,7 +240,7 @@ def proceed(urls_dirs, savephotos):
             create_dir(get_path(dir_))
             
             pages_with_error = []
-            pages_amount = get_pased_amount(url)
+            pages_amount = get_pages_amount(url)
 
             for i in range(1, pages_amount+1):
                 page_url = get_page_url(url, i)

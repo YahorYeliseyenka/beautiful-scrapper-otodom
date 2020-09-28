@@ -9,7 +9,7 @@
     -rt --rentaltype    - Enter one or more rental type:
                                 renting     - na wynajem
                                 selling     - na sprzedaż
-    -p --propertytype   - Enter one or more property types: 
+    -p  --propertytype  - Enter one or more property types: 
                                 house       - domy
                                 flat        - mieszkania
                                 room        - pokoje
@@ -17,7 +17,9 @@
                                 premises    - lokale użytkowe
                                 hall        - hale i magazyny
                                 garage      - garaży
-    -c --city           - Enter one or more city names
+    -c  --city          - Enter one or more city names
+
+    -sp --savephotos    - Use, if you want to save photos
     
 ## Optional arguments:
 
@@ -32,7 +34,12 @@
     Scrapper creates a '*\data' directory in the project folder. This 
     directory is used for storing the extracted data. Data is stored 
     in JSON files. The file names depend on the parameters entered 
-    by the user (for example, '*\data\renting-flat-poznan.json').
+    by the user. 
+    E.g. '*\data\renting-flat-poznan.json'.
+
+    Images are stored in the '*\data' subdirectories. Subdirectory names
+    depend on the parameters entered by the user.
+    E.g. '*\data\renting-flat-poznan-img\'.
 
     Scraper loads all pages from a category, views each page, gets 
     a single offer and then goes inside to collect data. 
@@ -41,4 +48,4 @@
     Category by category.
 
     If otodom.pl blocks page downloading, then scrapper appends it to the end 
-    of the queue, to try it later.s
+    of the queue, to try it later.
