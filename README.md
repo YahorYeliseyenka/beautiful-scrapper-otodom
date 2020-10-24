@@ -29,6 +29,21 @@
 ```console
     py main.py -rt renting -pt flat room -c poznan
 ```
+# Data arguments
+    Url
+    Offer name
+    Offer description
+    Photos
+    Address
+    Coordinates (Latitude, Longitude)
+    Geo_level (Region, Sub-region, City, District)
+    Characteristics (Space in m^2, Rooms num, Building type, Floor No and others)
+    Prise (Value, Unit, Suffix)
+    Features (Dishwasher, Fridge, Furniture, Oven, Stove, Washing machine, and others)
+    Owner (Name, Type, Phones, Avatar)
+    Extra (Advertiser type, Advert type, Agency)
+    Creation date
+    Last update date
 # How it works
 
     Scrapper creates a '*\data' directory in the project folder. This 
